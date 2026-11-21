@@ -33,3 +33,16 @@ export function configurationImage(settings,board) {
  new DataView(image.buffer).setUint32(8,data.length,true);image.set(data,12);
  return image;
 }
+
+export function usableServerIPv4(value) {
+ if(typeof value!=='string')return false;
+ const parts=value.split('.');
+ if(parts.length!==4||parts.some(part=>!/^\d{1,3}$/.test(part)||Number(part)>255||String(Number(part))!==part))return false;
+ const [first,second]=parts.map(Number);
+ return first>0&&first!==127&&first<224&&!(first===169&&second===254);
+}
+export function suggestedServerIPv4(advertised,hostname) {
+ if(usableServerIPv4(advertised))return advertised;
+ if(usableServerIPv4(hostname))return hostname;
+ return '';
+}

@@ -9,13 +9,19 @@ services:
     environment:
       PUID: "10001"
       PGID: "10001"
+      # Web interface port
       SINK_HTTP_PORT: "8080"
+      # Audio/control port; ESP32 devices connect to this
       SINK_TCP_PORT: "8765"
       SINK_SPOTIFY_ENABLED: "true"
       SINK_AIRPLAY_ENABLED: "true"
+      # Enable built-in self-signed HTTPS for browser USB flashing
       SINK_SETUP_HTTPS_ENABLED: "false"
       SINK_SETUP_HTTPS_PORT: "8443"
-      SINK_SETUP_HTTPS_HOSTS: "SINK_SETUP_HTTPS_HOSTS"
+      # Certificate IPs/hostnames, comma-separated; empty detects automatically
+      SINK_SETUP_HTTPS_HOSTS: ""
+      # Server LAN IPv4 to prefill during setup; empty uses the page's IPv4
+      SINK_ADVERTISED_IPV4: ""
     volumes:
       - radio-data:/data
     tmpfs:

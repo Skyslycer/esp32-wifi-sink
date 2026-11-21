@@ -1,9 +1,9 @@
 import {ESPLoader,Transport,SparkMD5} from './vendor/esptool-0.7.1.js';
-import {SESSION_KEY,selectedBoard,validateSettings,configurationImage} from './setup-config.js';
+import {SESSION_KEY,selectedBoard,validateSettings,configurationImage,usableServerIPv4,suggestedServerIPv4} from './setup-config.js';
 const $=id=>document.getElementById(id);
 const url=path=>new URL(path.replace(/^\//,''),new URL('./',location.href));
 const fields=['board','output','ssid','password','server','port','bclk','lrclk','dout','baud'];
-let step=1,busy=false,expected=null,pendingSignature='',polling=false,catalog=null,savedBoard='',savedOutput='';
+let step=1,busy=false,expected=null,pendingSignature='',polling=false,catalog=null,savedBoard='',savedOutput='',localHttpsUrl=null,setupConfig=null,serverEdited=false,automaticServer='',portEdited=false;
 function notice(message,error=true){$('setup-notice').textContent=message;$('setup-notice').hidden=!message;$('setup-notice').classList.toggle('success',!error);}
 async function api(path,body){const response=await fetch(url(path),body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await response.json();if(!response.ok)throw Error(data.error?.message||data.detail||'Could not complete setup.');return data;}
 function settings(){return Object.fromEntries(fields.map(name=>[name,['port','bclk','lrclk','dout','baud'].includes(name)?Number($('setup-'+name).value):$('setup-'+name).value]));}
@@ -14,13 +14,45 @@ function updateBoard(resetPins=false,preferredOutput=''){
  $('setup-output').replaceChildren(...Object.entries(selected.outputs).filter(([id])=>selected.images[id]).map(([id,label])=>{const option=document.createElement('option');option.value=id;option.textContent=label;return option;}));
  if(Object.hasOwn(selected.outputs,current)&&selected.images[current])$('setup-output').value=current;
  if(resetPins)for(const [key,value] of Object.entries(selected.i2s.default_pins))$('setup-'+key).value=value;
- $('setup-version').textContent=`Firmware: v${catalog.firmware_version}`;pins();
+ pins();
 }
 function pins(){ $('setup-pins').hidden=$('setup-output').value!=='i2s'; }
 function show(number){step=number;for(let i=1;i<=4;i++){$('step-'+i).hidden=i!==number;const item=document.querySelector(`[data-step="${i}"]`);if(i===number)item.setAttribute('aria-current','step');else item.removeAttribute('aria-current');}document.querySelector('.setup-steps').dataset.currentLabel=`Step ${number} of 4: ${document.querySelector(`[data-step="${number}"] .setup-step-label`).textContent}`;notice('');if(number===3){pendingSignature='';$('pending-clients').replaceChildren();$('approval-help').textContent='Waiting for approval requests.';poll();}$('step-'+number).querySelector('h2').setAttribute('tabindex','-1');$('step-'+number).querySelector('h2').focus();}
-function support(){let reason='';if(!window.isSecureContext)reason='USB flashing requires a secure browser origin. Open this page through an HTTPS reverse proxy or the optional built-in setup HTTPS listener with its certificate trusted.';else if(!navigator.serial)reason='Use a desktop browser with Web Serial support, such as Chrome or Edge.';$('usb-support').textContent=reason;$('usb-support').hidden=!reason;$('flash-device').disabled=!!reason;}
+function prefillServer(){
+ const field=$('setup-server');
+ if(serverEdited||(field.value&&field.value!==automaticServer))return;
+ const candidate=suggestedServerIPv4(setupConfig?.audio_server?.advertised_ipv4,location.hostname);
+ if(candidate){
+  field.value=candidate;automaticServer=candidate;
+  try{if(sessionStorage.getItem(SESSION_KEY)!==null)remember();}catch{}
+ }
+}
+function support(){
+ let reason='';
+ if(!window.isSecureContext)reason='USB flashing requires a secure browser origin. Open this page through an HTTPS reverse proxy or the optional built-in setup HTTPS listener with its certificate trusted.';
+ else if(!navigator.serial)reason='Use a desktop browser with Web Serial support, such as Chrome or Edge.';
+ const message=$('usb-support');message.textContent=reason;
+ if(!window.isSecureContext&&localHttpsUrl){
+  const link=document.createElement('a');link.href=localHttpsUrl;link.textContent=localHttpsUrl;
+  message.append(document.createTextNode(' Open '),link,document.createTextNode(' and trust its certificate.'));
+ }
+ message.hidden=!reason;$('flash-device').disabled=busy||!!reason;
+}
+api('/api/setup/config').then(config=>{
+ setupConfig=config;prefillServer();
+ if(!portEdited)$('setup-port').value=config.audio_server?.tcp_port||8765;
+ if(config.https?.enabled&&config.https.url){
+  const target=new URL(config.https.url);
+  if(target.protocol==='https:')localHttpsUrl=config.https.url;
+ }
+ support();
+}).catch(()=>{});
+
 try{const saved=JSON.parse(sessionStorage.getItem(SESSION_KEY)||'null');if(saved){savedBoard=saved.board||'';savedOutput=saved.output||'';for(const name of fields)if(name!=='board'&&saved[name]!==undefined)$('setup-'+name).value=saved[name];}}catch{}
-if(!$('setup-server').value&&/^\d+\.\d+\.\d+\.\d+$/.test(location.hostname))$('setup-server').value=location.hostname;
+try{portEdited=JSON.parse(sessionStorage.getItem(SESSION_KEY)||'null')?.port!==undefined;}catch{}
+serverEdited=!!$('setup-server').value;prefillServer();
+$('setup-port').addEventListener('input',()=>{portEdited=true;});
+$('setup-server').addEventListener('input',()=>{serverEdited=true;});
 pins();support();
 api('/api/setup/firmware').then(manifest=>{
  catalog=manifest;
@@ -28,13 +60,13 @@ api('/api/setup/firmware').then(manifest=>{
  $('setup-board').replaceChildren(...Object.entries(manifest.boards).map(([id,value])=>{const option=document.createElement('option');option.value=id;option.textContent=value.name;return option;}));
  if(Object.hasOwn(manifest.boards,savedBoard))$('setup-board').value=savedBoard;
  $('setup-board').disabled=false;updateBoard(!Object.hasOwn(manifest.boards,savedBoard),savedOutput);
-}).catch(error=>{$('setup-version').textContent='Firmware unavailable';notice(error.message);});
+}).catch(error=>{notice(error.message);});
 $('setup-board').addEventListener('change',()=>{updateBoard(true);remember();});
 $('setup-form').addEventListener('input',()=>{pins();remember();});
 $('setup-output').addEventListener('change',()=>{pins();remember();});
 $('setup-baud').addEventListener('change',remember);
 $('setup-form').onsubmit=event=>{event.preventDefault();try{const s=validateSettings(settings(),board());remember();$('flash-summary').replaceChildren();for(const [label,value] of [['Board',board().name],['Firmware',`v${catalog.firmware_version}`],['Output',board().outputs[s.output]],['Wi-Fi network',s.ssid],['Server',`${s.server}:${s.port}`]]){const term=document.createElement('dt'),description=document.createElement('dd');term.textContent=label;description.textContent=value;$('flash-summary').append(term,description);}support();show(2);}catch(error){notice(error.message);}};
-$('forget-settings').onclick=()=>{try{sessionStorage.removeItem(SESSION_KEY);}catch{}$('setup-form').reset();$('setup-baud').value='460800';if(catalog)updateBoard(true);pins();notice('Saved setup settings cleared.',false);};
+$('forget-settings').onclick=()=>{try{sessionStorage.removeItem(SESSION_KEY);}catch{}$('setup-form').reset();serverEdited=false;automaticServer='';portEdited=false;$('setup-port').value=setupConfig?.audio_server?.tcp_port||8765;prefillServer();$('setup-baud').value='460800';if(catalog)updateBoard(true);pins();notice('Saved setup settings cleared.',false);};
 $('review-pending').onclick=()=>{expected=null;remember();show(3);};
 $('back-settings').onclick=()=>show(1);$('back-flash').onclick=()=>show(expected?2:1);$('retry-approval').onclick=()=>show(3);
 $('setup-another').onclick=()=>{expected=null;remember();$('flash-progress').value=0;$('flash-status').textContent='Ready to flash.';show(1);};

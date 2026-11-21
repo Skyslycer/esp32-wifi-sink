@@ -52,10 +52,11 @@ firewall rules and interface selection rather than disabling host services.
 | `PGID` | `10001` | Application group ID; must be nonzero. |
 | `SINK_HTTP_PORT` | `8080` | HTTP website/API listener on the host. |
 | `SINK_TCP_PORT` | `8765` | ESP32 audio/control listener on the host. |
+| `SINK_ADVERTISED_IPV4` | automatic | LAN IPv4 address suggested by device setup, useful behind a reverse proxy or on hosts with multiple interfaces. |
 | `SINK_BIND_ADDRESS` | `0.0.0.0` | Bind address for HTTP, optional HTTPS and audio TCP listeners. |
 | `SINK_SPOTIFY_ENABLED` | `true` | Make the included Spotify receiver available. |
 | `SINK_AIRPLAY_ENABLED` | `true` | Make AirPlay available and start private D-Bus/Avahi. |
-| `SINK_SETUP_HTTPS_ENABLED` | `false` | Add a self-signed HTTPS listener for browser setup; HTTP stays available. |
+| `SINK_SETUP_HTTPS_ENABLED` | `false` | Add self-signed HTTPS for the whole website; plain HTTP on that port redirects to HTTPS. |
 | `SINK_SETUP_HTTPS_PORT` | `8443` | Optional HTTPS port; must differ from HTTP and audio TCP ports. |
 | `SINK_SETUP_HTTPS_HOSTS` | automatic | Comma-separated LAN IPs/hostnames used to open setup; included in the certificate. Localhost is always included. |
 | `SINK_MDNS_INTERFACES` | all | Optional comma-separated host interface names for Avahi, such as `eno1`. Does not restrict Spotify or WFAS discovery. |
@@ -95,6 +96,8 @@ volume. For a bind mount, create a private directory and mount it at
 of the mount root only, not existing files or directory ACLs. Keep the same IDs
 across updates and back up the entire directory while the container is stopped.
 
+Device setup uses the first available address: the saved browser session value, `SINK_ADVERTISED_IPV4`, then the page’s IPv4 hostname. The field stays editable. Set `SINK_ADVERTISED_IPV4=192.168.1.20` in the shell or Compose `.env` file to specify the audio server’s LAN address; this does not change its bind address.
+
 ## Optional HTTPS for browser flashing
 
 HTTPS is disabled by default. You can continue using your own reverse proxy, or
@@ -113,10 +116,22 @@ set them explicitly on hosts with multiple interfaces or when using a DNS alias.
 Rebuild the image for a local deployment, then recreate the container. For a
 published image, update to a release containing this feature and recreate it.
 
-Open `https://<server>:8443/setup` in desktop Chrome or Edge. HTTP on 8080 and the
-ESP32 audio port stay available. The HTTPS listener serves the same application,
-so setup APIs and firmware downloads stay on the HTTPS origin and share the same
-device state. HTTP is not redirected to HTTPS.
+The whole website is available through HTTPS:
+
+- Player: `https://<server>:8443/`
+- Administration: `https://<server>:8443/admin`
+- Device setup: `https://<server>:8443/setup`
+
+When setup is opened over HTTP, the flashing notice links to the built-in HTTPS
+setup URL using the configured certificate address and HTTPS port.
+
+Plain HTTP requests sent to the HTTPS port redirect to the same HTTPS URL,
+preserving the hostname, port, path and query string. For example,
+`http://<server>:8443/setup` redirects to `https://<server>:8443/setup`.
+The separate HTTP listener on 8080 continues to serve the application directly;
+its health check and the ESP32 audio port stay available. Both web listeners
+share device state, APIs, firmware downloads and live updates.
+Use desktop Chrome or Edge for USB flashing.
 
 A self-signed certificate is generated in `/data/tls/setup.crt`, with its private
 key at `/data/tls/setup.key`. Import the public certificate into the browser/OS

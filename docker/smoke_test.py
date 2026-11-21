@@ -24,6 +24,7 @@ def main():
         docker('run', '-d', '--name', name, '--read-only', '--tmpfs', '/run',
                '--tmpfs', '/tmp', '--security-opt', 'no-new-privileges:true',
                '-e', 'PUID=12345', '-e', 'PGID=12345',
+               '-e', 'SINK_ADVERTISED_IPV4=192.168.1.20',
                '-v', volume + ':/data', *tls_env, args.image)
         deadline = time.monotonic() + 60
         while True:
@@ -44,6 +45,8 @@ def get(path):
         assert response.status==200
         return response.read()
 
+config=json.loads(get('/api/setup/config'))
+assert config['audio_server']['advertised_ipv4']=='192.168.1.20'
 health=json.loads(get('/api/health'))
 version=Path('/app/VERSION').read_text().strip()
 assert json.loads(get('/api/version'))['server_version']==version
@@ -62,14 +65,23 @@ for board in manifest['boards'].values():
 if os.environ.get('SINK_SETUP_HTTPS_ENABLED') == 'true':
     cert=Path('/data/tls/setup.crt')
     context=ssl.create_default_context(cafile=str(cert))
-    for path in ('/setup','/api/health','/api/setup/firmware'):
+    for path in ('/','/admin','/setup','/api/health','/api/setup/firmware'):
         with urlopen('https://127.0.0.1:8443'+path,context=context,timeout=5) as response:
             assert response.status==200
+    import http.client
+    connection=http.client.HTTPConnection('127.0.0.1',8443,timeout=5)
+    connection.request('GET','/setup?next=%2Fadmin&name=a%20b')
+    response=connection.getresponse()
+    assert response.status==308
+    assert response.getheader('Location')=='https://127.0.0.1:8443/setup?next=%2Fadmin&name=a%20b'
+    response.read();connection.close()
+    assert json.loads(get('/api/setup/config'))['https']=={'enabled':True,'url':'https://127.0.0.1:8443/setup'}
     assert get('/api/setup/certificate')==cert.read_bytes()
     assert Path('/data/tls/setup.key').stat().st_mode & 0o777 == 0o600
-    print('Trusted HTTPS setup, APIs, certificate download and key permissions passed')
+    print('Trusted HTTPS pages, APIs, HTTP redirect, certificate download and key permissions passed')
 else:
     assert not Path('/data/tls').exists()
+    assert json.loads(get('/api/setup/config'))['https']=={'enabled':False,'url':None}
 print('HTTP pages, firmware hashes, source availability and application UID passed')
 ''')
         # D-Bus must accept the application UID for AirPlay's Avahi registration.

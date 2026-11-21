@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 import asyncio
 import json
+import ipaddress
 import os
 import sys
 
@@ -18,6 +19,7 @@ from audio.sources import PCMClip
 from registry import Registry
 from maintenance import process_stats
 from version import SERVER_VERSION
+from setup_network import advertised_address
 from radio.favorites import Favorites
 from radio.directory import RadioBrowser
 from radio.source import RadioAudio
@@ -89,7 +91,8 @@ class Command(BaseModel):
     args: dict = Field(default_factory=dict)
 
 
-def create_app(state_dir: Path, tcp_host='0.0.0.0', tcp_port=8765, bench_pcm=None, allow_private_streams=False, spotify_binary=None, airplay_binary=None, restart_callback=None, setup_certificate=None):
+def create_app(state_dir: Path, tcp_host='0.0.0.0', tcp_port=8765, bench_pcm=None, allow_private_streams=False, spotify_binary=None, airplay_binary=None, restart_callback=None, setup_certificate=None, setup_https_port=None, setup_https_hosts=(), advertised_ipv4=None):
+    advertised_ipv4 = advertised_address(advertised_ipv4)
     state_dir.mkdir(parents=True, exist_ok=True)
     registry = Registry(state_dir / 'devices.json')
     favorites = Favorites(state_dir / 'favorites.json')
@@ -171,6 +174,26 @@ def create_app(state_dir: Path, tcp_host='0.0.0.0', tcp_port=8765, bench_pcm=Non
     @app.exception_handler(TimeoutError)
     async def timeout_error(request, exc):
         return JSONResponse(status_code=504, content={'error': {'code': 'DEVICE_TIMEOUT'}})
+
+    @app.get('/api/setup/config')
+    async def setup_config(request: Request):
+        https_url = None
+        if setup_https_port:
+            hosts = list(setup_https_hosts)
+            host = request.url.hostname if request.url.hostname in hosts else None
+            if host is None:
+                def usable(value):
+                    try:
+                        address = ipaddress.ip_address(value)
+                        return not (address.is_loopback or address.is_unspecified)
+                    except ValueError:
+                        return value != 'localhost'
+                host = next((value for value in hosts if usable(value)), hosts[0] if hosts else request.url.hostname)
+            authority = f'[{host}]' if ':' in host else host
+            https_url = f'https://{authority}:{setup_https_port}/setup'
+        return JSONResponse({'https':{'enabled':bool(setup_https_port),'url':https_url},
+                             'audio_server':{'advertised_ipv4':advertised_ipv4,'tcp_port':tcp_port}},
+                            headers={'Cache-Control':'no-store'})
 
     @app.get('/api/setup/certificate')
     async def setup_public_certificate():
@@ -467,7 +490,7 @@ if __name__ == '__main__':
     parser.add_argument('--airplay-binary', type=Path, help='Optional Shairport Sync 5.6.3 classic audio executable')
     args = parser.parse_args()
     print(f'ESP32 Wi-Fi sink server v{SERVER_VERSION}', flush=True)
-    from setup_tls import configuration, ensure_certificate, serve_with_https
+    from setup_tls import configuration, certificate_hosts, ensure_certificate, serve_with_https
     https_port = configuration()
     if https_port is not None and https_port in (args.http_port, args.tcp_port):
         parser.error('Setup HTTPS port must differ from HTTP and audio TCP ports')
@@ -478,7 +501,7 @@ if __name__ == '__main__':
         restart_requested = True
         if https_port is None:
             server.should_exit = True
-    app = create_app(args.state_dir, args.host, args.tcp_port, args.bench_pcm, args.allow_private_streams, args.spotify_binary, args.airplay_binary, restart_callback=request_process_restart, setup_certificate=certificate)
+    app = create_app(args.state_dir, args.host, args.tcp_port, args.bench_pcm, args.allow_private_streams, args.spotify_binary, args.airplay_binary, restart_callback=request_process_restart, setup_certificate=certificate, setup_https_port=https_port, setup_https_hosts=certificate_hosts(args.host) if https_port else (), advertised_ipv4=os.environ.get('SINK_ADVERTISED_IPV4'))
     # Both listeners share one controller, registry and TCP audio server.
     if https_port:
         asyncio.run(serve_with_https(app, args.host, args.http_port, https_port,

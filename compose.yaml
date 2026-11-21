@@ -17,6 +17,7 @@ services:
       SINK_SETUP_HTTPS_ENABLED: "${SINK_SETUP_HTTPS_ENABLED:-false}"
       SINK_SETUP_HTTPS_PORT: "${SINK_SETUP_HTTPS_PORT:-8443}"
       SINK_SETUP_HTTPS_HOSTS: "${SINK_SETUP_HTTPS_HOSTS:-}"
+      SINK_ADVERTISED_IPV4: "${SINK_ADVERTISED_IPV4:-}"
     volumes:
       - radio-data:/data
     tmpfs:

@@ -1,4 +1,4 @@
-"""Optional local HTTPS certificate and a second listener sharing the server state."""
+"""Optional local HTTPS for the whole application, sharing one server state."""
 import asyncio
 from contextlib import contextmanager
 import ipaddress
@@ -13,6 +13,7 @@ import subprocess
 import tempfile
 
 import uvicorn
+from https_listener import HTTPSListener
 
 
 def configuration():
@@ -137,14 +138,22 @@ async def serve_with_https(app, host, http_port, https_port, cert, key, restart_
             listeners.append(server.config.bind_socket())
         previous = {sig: signal.signal(sig, stop) for sig in (signal.SIGINT, signal.SIGTERM)}
         async with app.router.lifespan_context(app):
-            tasks = [asyncio.create_task(server.serve(sockets=[listener]))
-                     for server, listener in zip(servers, listeners)]
-            while all(not task.done() for task in tasks):
-                if restart_requested():
-                    stop()
-                await asyncio.sleep(.1)
-            stop()
-            await asyncio.gather(*tasks)
+            tasks = [asyncio.create_task(servers[0].serve(sockets=[listeners[0]])),
+                     asyncio.create_task(servers[1].serve(sockets=[])),
+                     asyncio.create_task(HTTPSListener(servers[1]).run(listeners[1]))]
+            try:
+                while all(not task.done() for task in tasks):
+                    if restart_requested():
+                        stop()
+                    await asyncio.sleep(.1)
+            finally:
+                stop()
+                tasks[2].cancel()  # Stop accepting before draining Uvicorn connections.
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+            for result in results:
+                if isinstance(result, BaseException) and not isinstance(result, asyncio.CancelledError):
+                    raise result
+
     finally:
         stop()
         if tasks:

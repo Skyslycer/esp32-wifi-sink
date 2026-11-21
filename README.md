@@ -67,11 +67,12 @@ docker compose -f compose.example.yaml up -d
 
 ### Browser setup
 
-Open `http://<SERVER-IP>:8080/setup` for the separate setup wizard:
+Open `http://<SERVER-IP>:8080/setup` for the separate setup wizard. The audio server address is suggested automatically and stays editable. Set `SINK_ADVERTISED_IPV4` to its LAN IPv4 address when using a reverse proxy or a host with multiple interfaces; saved session values take priority.
+
+Follow these steps:
 
 1. Select the board and output, then enter Wi-Fi credentials, the server LAN
-   IPv4 address and TCP port. The selected board’s firmware version appears next
-   to the page title. I2S output also lets you choose the GPIOs.
+   IPv4 address and TCP port. I2S output also lets you choose the GPIOs.
 2. Plug the selected board into the computer running your browser and select
    **Connect & flash**. Select a flash baud rate on this screen (460800 by default).
    The server supplies the board’s published firmware image. Wi-Fi
@@ -97,7 +98,10 @@ SINK_SETUP_HTTPS_HOSTS=192.168.1.20
 Replace the IP with your server's LAN address. After recreating the container,
 trust its generated public certificate on the flashing computer and open
 `https://<SERVER-IP>:8443/setup`. See [certificate setup and port options](docker/README.md#optional-https-for-browser-flashing).
-This option defaults to `false`; ordinary HTTP stays available when enabled.
+The player (`/`) and admin (`/admin`) are also available on that HTTPS port.
+Opening an `http://` URL on the HTTPS port redirects to `https://` with the same
+path and query. This option defaults to `false`; the separate ordinary HTTP
+listener stays available when enabled.
 Use desktop Chrome or Edge with Web Serial support. An HTTP LAN address can
 review and approve pending clients, but USB flashing is disabled there.
 
