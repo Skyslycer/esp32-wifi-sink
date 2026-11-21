@@ -1,0 +1,29 @@
+# Run with: docker compose -f compose.example.yaml up -d
+services:
+  radio:
+    image: ghcr.io/skyslycer/esp32-wifi-sink:latest
+    platform: linux/amd64
+    network_mode: host
+    restart: unless-stopped
+    stop_grace_period: 30s
+    environment:
+      PUID: "10001"
+      PGID: "10001"
+      SINK_HTTP_PORT: "8080"
+      SINK_TCP_PORT: "8765"
+      SINK_SPOTIFY_ENABLED: "true"
+      SINK_AIRPLAY_ENABLED: "true"
+      SINK_SETUP_HTTPS_ENABLED: "false"
+      SINK_SETUP_HTTPS_PORT: "8443"
+      SINK_SETUP_HTTPS_HOSTS: "SINK_SETUP_HTTPS_HOSTS"
+    volumes:
+      - radio-data:/data
+    tmpfs:
+      - /run
+      - /tmp
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  radio-data:

@@ -1,0 +1,26 @@
+{
+  "name": "ESP32-WROOM",
+  "chip": "ESP32",
+  "esptool_chip": "esp32",
+  "idf": "6.1.1",
+  "config_format": "sinkcfg1",
+  "config_offset": 3211264,
+  "config_size": 4096,
+  "flash": {
+    "size": "4MB",
+    "mode": "dio",
+    "frequency": "40m",
+    "offset": 0,
+    "bootloader_offset": 4096,
+    "partition_table_offset": 32768,
+    "app_offset": 65536
+  },
+  "outputs": {
+    "bluetooth": "Bluetooth speaker",
+    "i2s": "PCM5102 / PCM5102A"
+  },
+  "i2s": {
+    "default_pins": {"bclk": 26, "lrclk": 25, "dout": 22},
+    "output_pins": [0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33]
+  }
+}

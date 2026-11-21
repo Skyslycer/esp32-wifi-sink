@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "firmware_version": "0.9.3",
+  "boards": {
+    "esp32-wroom": {
+      "name": "ESP32-WROOM",
+      "chip": "ESP32",
+      "esptool_chip": "esp32",
+      "idf": "6.1.1",
+      "config_format": "sinkcfg1",
+      "config_offset": 3211264,
+      "config_size": 4096,
+      "flash": {
+        "size": "4MB",
+        "mode": "dio",
+        "frequency": "40m",
+        "offset": 0,
+        "bootloader_offset": 4096,
+        "partition_table_offset": 32768,
+        "app_offset": 65536
+      },
+      "outputs": {
+        "bluetooth": "Bluetooth speaker",
+        "i2s": "PCM5102 / PCM5102A"
+      },
+      "i2s": {
+        "default_pins": {
+          "bclk": 26,
+          "lrclk": 25,
+          "dout": 22
+        },
+        "output_pins": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          21,
+          22,
+          23,
+          25,
+          26,
+          27,
+          32,
+          33
+        ]
+      },
+      "images": {
+        "bluetooth": {
+          "url": "assets/firmware/esp32-wroom/bluetooth.bin",
+          "sha256": "c570688371a4498f1a467b25c5919999a1bb5ffc2e278b976f33226fadd05856",
+          "size": 1324848
+        },
+        "i2s": {
+          "url": "assets/firmware/esp32-wroom/i2s.bin",
+          "sha256": "5430896654eceff225ed6e6905410b11e5f9dc7d79962fae9fb188ae65149b90",
+          "size": 906944
+        }
+      }
+    }
+  }
+}

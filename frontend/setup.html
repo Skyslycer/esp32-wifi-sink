@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#192d37"><title>Setup Radio</title>
+  <link rel="icon" href="data:,"><link rel="stylesheet" href="assets/style.css?v=uniform-radius-1-mobile-steps-1">
+  <script type="module" src="assets/setup.js?v=board-selection-1"></script>
+<script src="assets/server-version.js" defer></script></head>
+<body class="admin-page setup-page"><div class="shell">
+  <main class="listening">
+    <div class="section-heading"><h1>Device setup</h1><span id="setup-version" class="muted small" aria-live="polite">Loading firmware…</span></div>
+    <ol class="setup-steps" aria-label="Setup progress" data-current-label="Step 1 of 4: Settings"><li data-step="1" aria-current="step"><span class="setup-step-number">1</span><span class="setup-step-label">Settings</span></li><li data-step="2"><span class="setup-step-number">2</span><span class="setup-step-label">Flash</span></li><li data-step="3"><span class="setup-step-number">3</span><span class="setup-step-label">Approve</span></li><li data-step="4"><span class="setup-step-number">4</span><span class="setup-step-label">Done</span></li></ol>
+    <p id="setup-notice" class="notice" role="status" hidden></p>
+    <section id="step-1" class="setup-card" aria-labelledby="settings-title">
+      <h2 id="settings-title">Device settings</h2><p class="muted setup-intro">Enter the network and output settings. Values are saved for this browser session.</p>
+      <form id="setup-form" class="form-grid">
+        <label>Output<select id="setup-output"><option value="bluetooth">Bluetooth speaker</option><option value="i2s">PCM5102 / PCM5102A</option></select></label>
+        <label>Board<select id="setup-board" required disabled><option value="">Loading…</option></select></label>
+        <label>Wi-Fi network (2.4 GHz)<input id="setup-ssid" maxlength="32" autocomplete="off" required></label>
+        <label>Wi-Fi password<input id="setup-password" type="password" maxlength="64" autocomplete="off"></label>
+        <label>Audio server IPv4 address<input id="setup-server" placeholder="192.168.1.20" inputmode="decimal" required></label>
+        <label>Audio server TCP port<input id="setup-port" type="number" min="1" max="65535" value="8765" required></label>
+        <fieldset id="setup-pins" class="setup-pins" hidden><legend>I2S pins</legend><label>BCLK<input id="setup-bclk" type="number" value="26" required></label><label>LRCLK<input id="setup-lrclk" type="number" value="25" required></label><label>Data out<input id="setup-dout" type="number" value="22" required></label></fieldset>
+        <div class="button-row setup-full"><button class="button" type="submit">Continue to flashing</button><button id="forget-settings" class="button secondary" type="button">Clear saved settings</button></div>
+      </form>
+      <div class="setup-existing"><p class="muted">Already flashed a device?</p><button id="review-pending" class="button secondary" type="button">Review pending clients</button></div>
+    </section>
+    <section id="step-2" class="setup-card" aria-labelledby="flash-title" hidden>
+      <h2 id="flash-title">Connect your board</h2><p class="muted setup-intro">Plug the board into this computer with a USB data cable. Close other serial monitors, then choose its port.</p>
+      <p id="usb-support" class="notice" hidden></p><dl id="flash-summary" class="setup-intro flash-summary"></dl>
+      <label class="flash-baud">Flash baud rate<select id="setup-baud"><option value="115200">115200</option><option value="230400">230400</option><option value="460800" selected>460800</option><option value="921600">921600</option></select></label>
+      <progress id="flash-progress" max="100" value="0" aria-label="Flash progress"></progress><p id="flash-status" role="status" class="muted">Ready to flash.</p>
+      <div class="button-row"><button id="flash-device" class="button" type="button">Connect & flash</button><button id="back-settings" class="button secondary" type="button">Back to settings</button><button id="retry-approval" class="button secondary" type="button">Already flashed? Continue</button></div>
+    </section>
+    <section id="step-3" class="setup-card" aria-labelledby="approve-title" hidden>
+      <h2 id="approve-title">Approve device</h2><p id="approval-help" class="muted setup-intro">Waiting for approval requests.</p>
+      <div id="pending-clients" class="setup-pending"></div><div class="button-row"><button id="back-flash" class="button secondary" type="button">Back</button></div>
+    </section>
+    <section id="step-4" class="setup-card" aria-labelledby="done-title" hidden>
+      <h2 id="done-title">Setup complete</h2><p id="setup-done" class="muted setup-intro"></p><div class="button-row"><button id="setup-another" class="button" type="button">Set up another device</button><a href="admin" class="button secondary">Open administration</a></div>
+    </section>
+  </main><footer class="setup-footer"><span data-server-version aria-label="Server version">—</span><a href="admin">Admin</a><a href="./">Internet Radio</a></footer>
+</div></body></html>

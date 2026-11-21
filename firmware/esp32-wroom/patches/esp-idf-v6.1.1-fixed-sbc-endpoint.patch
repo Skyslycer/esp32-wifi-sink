@@ -1,0 +1,22 @@
+diff --git a/components/bt/host/bluedroid/btc/profile/std/a2dp/btc_av.c b/components/bt/host/bluedroid/btc/profile/std/a2dp/btc_av.c
+--- a/components/bt/host/bluedroid/btc/profile/std/a2dp/btc_av.c
++++ b/components/bt/host/bluedroid/btc/profile/std/a2dp/btc_av.c
+@@ -1659,6 +1659,18 @@
+             sbc->max_bitpool < sbc->min_bitpool) {
+             return FALSE;
+         }
++        /* Wi-Fi Sink forwards one server-encoded SBC profile. Advertising
++         * mandatory encoder formats we cannot produce would be misleading.
++         * Permit only that exact external-source profile; keep the standard
++         * checks below for all sinks and other source capabilities. */
++        if (!is_sink && sbc->samp_freq == ESP_A2D_SBC_CIE_SF_44K &&
++            sbc->ch_mode == ESP_A2D_SBC_CIE_CH_MODE_STEREO &&
++            sbc->block_len == ESP_A2D_SBC_CIE_BLOCK_LEN_16 &&
++            sbc->num_subbands == ESP_A2D_SBC_CIE_NUM_SUBBANDS_8 &&
++            sbc->alloc_mthd == ESP_A2D_SBC_CIE_ALLOC_MTHD_LOUDNESS &&
++            sbc->min_bitpool == 52 && sbc->max_bitpool == 52) {
++            return TRUE;
++        }
+         /* Table 4.4: block length 4/8/12/16 mandatory for SRC and SNK. */
+         if ((sbc->block_len & BTC_AV_SBC_BLOCK_LEN_ALL) != BTC_AV_SBC_BLOCK_LEN_ALL) {
+             return FALSE;

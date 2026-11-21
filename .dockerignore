@@ -1,0 +1,18 @@
+# Only application code, static assets and container startup files enter the build.
+**
+!Dockerfile
+!VERSION
+!docker/
+!docker/**
+!server/
+!server/**
+!frontend/
+!frontend/**
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/.env
+**/.env.*
+**/node_modules/
+**/.venv/
+**/.flash-venv/

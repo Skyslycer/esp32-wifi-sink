@@ -1,0 +1,19 @@
+diff --git a/components/bt/CMakeLists.txt b/components/bt/CMakeLists.txt
+--- a/components/bt/CMakeLists.txt
++++ b/components/bt/CMakeLists.txt
+@@ -31,7 +31,14 @@
+     add_subdirectory(controller)
+     list(APPEND srcs ${bt_ctrl_srcs})
+     list(APPEND include_dirs ${bt_ctrl_include_dirs})
+-    set(ldscripts ${bt_ctrl_ldscripts})
++    # ldgen splits spaces before resolving paths; use relative fragments.
++    set(ldscripts "")
++    foreach(fragment IN LISTS bt_ctrl_ldscripts)
++        if(IS_ABSOLUTE "${fragment}")
++            file(RELATIVE_PATH fragment "${CMAKE_CURRENT_LIST_DIR}" "${fragment}")
++        endif()
++        list(APPEND ldscripts "${fragment}")
++    endforeach()
+ 
+     # Controller porting or porting_btdm
+     if(CONFIG_SOC_ESP_NIMBLE_CONTROLLER)

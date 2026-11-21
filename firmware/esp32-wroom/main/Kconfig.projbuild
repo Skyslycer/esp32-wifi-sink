@@ -1,0 +1,26 @@
+menu "Audio sink hardware"
+choice SINK_OUTPUT
+    prompt "Output hardware (fixed for this device)"
+    default SINK_OUTPUT_BLUETOOTH
+config SINK_OUTPUT_BLUETOOTH
+    bool "Bluetooth Classic A2DP source"
+config SINK_OUTPUT_PCM5102
+    bool "I2S PCM5102 / PCM5102A line output"
+endchoice
+config SINK_BT_FIXED_TX_POWER_9DBM
+    bool "Experimental fixed +9 dBm Bluetooth transmit power"
+    depends on SINK_OUTPUT_BLUETOOTH
+    default n
+config SINK_I2S_BCLK
+    int "I2S bit-clock GPIO"
+    default 26
+    depends on SINK_OUTPUT_PCM5102
+config SINK_I2S_LRCLK
+    int "I2S word-clock GPIO"
+    default 25
+    depends on SINK_OUTPUT_PCM5102
+config SINK_I2S_DOUT
+    int "I2S data-out GPIO"
+    default 22
+    depends on SINK_OUTPUT_PCM5102
+endmenu

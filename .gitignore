@@ -1,0 +1,15 @@
+build/
+sdkconfig
+sdkconfig.old
+sdkconfig.local
+__pycache__/
+.venv/
+*.bin
+state/
+managed_components/
+
+!frontend/firmware/**/*.bin
+.build-web/
+node_modules/
+
+.flash-venv/

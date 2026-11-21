@@ -1,0 +1,30 @@
+services:
+  radio:
+    image: ${RADIO_IMAGE:-esp32-wifi-sink:local}
+    build:
+      context: .
+    platform: linux/amd64
+    network_mode: host
+    restart: unless-stopped
+    stop_grace_period: 30s
+    environment:
+      PUID: ${PUID:-10001}
+      PGID: ${PGID:-10001}
+      SINK_HTTP_PORT: ${SINK_HTTP_PORT:-8080}
+      SINK_TCP_PORT: ${SINK_TCP_PORT:-8765}
+      SINK_SPOTIFY_ENABLED: "${SINK_SPOTIFY_ENABLED:-true}"
+      SINK_AIRPLAY_ENABLED: "${SINK_AIRPLAY_ENABLED:-true}"
+      SINK_SETUP_HTTPS_ENABLED: "${SINK_SETUP_HTTPS_ENABLED:-false}"
+      SINK_SETUP_HTTPS_PORT: "${SINK_SETUP_HTTPS_PORT:-8443}"
+      SINK_SETUP_HTTPS_HOSTS: "${SINK_SETUP_HTTPS_HOSTS:-}"
+    volumes:
+      - radio-data:/data
+    tmpfs:
+      - /run
+      - /tmp
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  radio-data:
